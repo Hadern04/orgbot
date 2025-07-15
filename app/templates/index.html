@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Организатор мероприятий</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .feature { background: #f5f5f5; padding: 10px; margin: 5px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>{{ message }}</h1>
+    <h2>Возможности:</h2>
+    <div>
+        {% for feature in features %}
+        <div class="feature">{{ feature }}</div>
+        {% endfor %}
+    </div>
+    <p>API доступно по <a href="/docs">/docs</a></p>
+</body>
+</html>

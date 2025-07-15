@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Список мероприятий</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="/static/css/events.css">
+    <link rel="icon" href="data:;base64,=">
+</head>
+<body oncontextmenu="return false;">
+    {% if access %}
+    <div class="container">
+        <header class="main-header">
+            <h1>Мероприятия</h1>
+            <button id="add-event-btn" class="add-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Добавить</span>
+            </button>
+        </header>
+
+
+        <div class="controls">
+            <label for="sort-by">Сортировать по:</label>
+            <div class="select-wrapper">
+                <select id="sort-by">
+                    <option value="date">Дате</option>
+                    <option value="name">Названию</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="event-list" class="event-list">
+            <!-- Event cards will be dynamically inserted here -->
+        </div>
+
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <img src="static/img/calendar-empty.png" alt="Пустой календарь">
+            <h2>Список мероприятий пуст</h2>
+            <p>Нажмите "Добавить", чтобы создать новое мероприятие.</p>
+        </div>
+    </div>
+
+    <!-- Modal for Add/Edit Event -->
+    <div id="modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <form id="event-form">
+                <h2 id="modal-title">Добавить мероприятие</h2>
+                <input type="hidden" id="event-id">
+                <div class="form-group">
+                    <label for="event-name">Название мероприятия</label>
+                    <input type="text" id="event-name" name="eventName" required placeholder="Например, Конференция по AI">
+                </div>
+                <div class="form-group">
+                    <label for="event-date">Дата проведения</label>
+                    <input type="text" id="event-date" name="eventDate" placeholder="Выберите дату..." required>
+                </div>
+                <div class="form-group">
+                    <label for="event-location">Место проведения</label>
+                    <input type="text" id="event-location" name="eventLocation" required placeholder="Например, г. Москва, Экспоцентр">
+                </div>
+                <input type="hidden" id="user_id" name="user_id" value="{{ user_id }}">
+                <div class="button-group">
+                    <button type="submit" id="save-button">Сохранить</button>
+                    <button type="button" id="cancel-button" class="cancel">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <p>{{ message }}</p>
+    {% endif %}
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ru.js"></script>
+    <script>
+        const serverEvents = {{ events|tojson|safe }};
+    </script>
+    <script type="module" src="/static/js/events.js"></script>
+</body>
+</html>
