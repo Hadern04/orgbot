@@ -46,7 +46,6 @@
             </div>
         </div>
     </div>
-
     <!-- Modal for Add/Edit Contractor -->
     <div id="modal-overlay" class="modal-overlay" style="display: none;">
         <div class="modal-content">
@@ -70,7 +69,7 @@
                     <label for="item-contact">Контактное лицо</label>
                     <input type="text" id="item-contact" name="itemContact" required placeholder="Например, Иван Иванов">
                 </div>
-                <input type="hidden" id="user_id" name="user_id" value="{{ user_id }}">
+                <input type="hidden" id="user-id" value="{{ user_id }}">
                 <div class="button-group">
                     <button type="submit" id="save-button">Сохранить</button>
                     <button type="button" id="cancel-button" class="cancel">Отмена</button>
@@ -84,10 +83,6 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-        const serverContractors = {{ contractors|tojson|safe }};
-        let serverCategories = {{ categories|tojson|safe }};
-    </script>
-    <script type="module" src="static/js/contractors.js"></script>
+    <script type="module" src="static/js/contractors.js?v=1.0"></script>
 </body>
 </html>

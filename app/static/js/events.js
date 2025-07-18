@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // --- DATA & STATE ---
     let currentSort = 'date';
+    let serverEvents = []; // Хранение списка мероприятий
 
     // --- DOM ELEMENTS ---
     const eventList = document.getElementById('event-list');
@@ -11,32 +12,46 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalTitle = document.getElementById('modal-title');
     const eventForm = document.getElementById('event-form');
     const cancelButton = document.getElementById('cancel-button');
-    const eventIdInput = document.getElementById('event-id');
-    const eventNameInput = document.getElementById('event-name');
-    const eventDateInput = document.getElementById('event-date');
-    const eventLocationInput = document.getElementById('event-location');
-    const eventUserId = document.getElementById('user_id');
+    const itemIdInput = document.getElementById('event-id');
+    const eventNameInput = document.getElementById('name');
+    const itemDateInput = document.getElementById('date');
+    const itemLocationInput = document.getElementById('location');
+    const itemUserId = document.getElementById('user-id');
 
     // Toast element
     const toast = document.getElementById('toast');
 
     // --- FLATPICKR INITIALIZATION ---
-        const fp = flatpickr("#event-date", {
-            locale: "ru",
-            dateFormat: "Y-m-d",
-            altInput: true,
-            altFormat: "j F Y г.",
-            allowInput: true,
-            minDate: "today",
-            disable: [
-                function(date) {
-                    // Disable dates before today
-                    return date < new Date().fp_incr(-1);
-                }
-            ]
-        });
+    const fp = flatpickr("#date", {
+        locale: "ru",
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "j F Y г.",
+        allowInput: true,
+        minDate: "today",
+        disable: [
+            function(date) {
+                return date < new Date().fp_incr(-1);
+            }
+        ]
+    });
 
     // --- FUNCTIONS ---
+    async function fetchEvents() {
+        try {
+            const response = await fetch(`/api/events?owner_id=${itemUserId.value}`); // Запрос на сервер для получения списка мероприятий
+            if (!response.ok) {
+                showToast('Ошибка при загрузке мероприятий', 'error');
+                return;
+            }
+            serverEvents = await response.json();
+            renderEvents(serverEvents);
+        } catch (error) {
+            console.error('Fetch error:', error);
+            showToast('Ошибка сети', 'error');
+        }
+    }
+
     function handleResize() {
         const addBtnText = document.querySelector('.add-btn-text');
         if (!addBtnText) return;
@@ -58,10 +73,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function sortEvents(events) {
         return [...events].sort((a, b) => {
             if (currentSort === 'name') {
-                return a.event_title.localeCompare(b.event_title);
+                return a.title.localeCompare(b.title);
             }
-            // Default to date sort
-            return new Date(a.event_date) - new Date(b.event_date);
+            return new Date(a.date) - new Date(b.date);
         });
     }
 
@@ -80,9 +94,9 @@ document.addEventListener('DOMContentLoaded', function() {
         sortedEvents.forEach(event => {
             const eventCard = document.createElement('div');
             eventCard.className = 'event-card';
-            eventCard.dataset.id = event.event_id;
+            eventCard.dataset.id = event.id;
 
-            const eventDate = new Date(event.event_date);
+            const eventDate = new Date(event.date);
             const formattedDate = eventDate.toLocaleDateString('ru-RU', {
                 day: 'numeric',
                 month: 'long',
@@ -91,21 +105,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
             eventCard.innerHTML = `
                 <div class="event-details">
-                    <h3>${event.event_title}</h3>
+                    <h3>${event.title}</h3>
                     <p class="event-date">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                         ${formattedDate}
                     </p>
-                    ${event.event_location ? `
+                    ${event.location ? `
                     <p class="event-location">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                        ${event.event_location}
+                        ${event.location}
                     </p>
                     ` : ''}
                 </div>
                 <div class="event-actions">
-                    <button class="edit-btn" data-id="${event.event_id}">Изменить</button>
-                    <button class="delete-btn" data-id="${event.event_id}">Удалить</button>
+                    <button class="edit-btn" data-id="${event.id}">Изменить</button>
+                    <button class="delete-btn" data-id="${event.id}">Удалить</button>
                 </div>
             `;
             eventList.appendChild(eventCard);
@@ -117,17 +131,17 @@ document.addEventListener('DOMContentLoaded', function() {
         fp.clear();
 
         if (type === 'edit') {
-            const event = serverEvents.find(e => e.event_id === eventId);
+            const event = serverEvents.find(e => e.id === eventId);
             if (!event) return;
 
             modalTitle.textContent = 'Редактировать мероприятие';
-            eventIdInput.value = event.event_id;
-            eventNameInput.value = event.event_title;
-            fp.setDate(event.event_date, true);
-            eventLocationInput.value = event.event_location || ''
+            itemIdInput.value = event.id;
+            eventNameInput.value = event.title;
+            fp.setDate(event.date, true);
+            itemLocationInput.value = event.location || ''
         } else {
             modalTitle.textContent = 'Добавить мероприятие';
-            eventIdInput.value = '';
+            itemIdInput.value = '';
         }
 
         modalOverlay.style.display = 'flex';
@@ -172,12 +186,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!confirmed) return;
 
                 try {
-                    const response = await fetch(`/api/event/${eventId}`, {
+                    const response = await fetch(`/api/events/${eventId}`, {
                         method: 'DELETE'
                     });
 
                     if (response.ok) {
-                        window.location.reload();
+                        await fetchEvents(); // Перезагружаем список мероприятий
                     } else {
                         showToast('Ошибка при удалении', 'error');
                     }
@@ -203,31 +217,30 @@ document.addEventListener('DOMContentLoaded', function() {
     eventForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        const id = parseInt(itemIdInput.value);
 
-
-        const id = parseInt(eventIdInput.value);
         const eventData = {
-            title: eventNameInput.value,
-            event_date: eventDateInput.value,
-            location: eventLocationInput.value,
-            user_id: eventUserId.value
+            owner_id: itemUserId.value,
+            title: eventNameInput.value.trim(),
+            location: itemLocationInput.value.trim(),
+            date: itemDateInput.value
         };
 
         try {
-            const url = id ? `/api/event/${id}` : '/api/event';
+            const url = id ? `/api/events/${id}` : '/api/events';
             const method = id ? 'PUT' : 'POST';
 
             const response = await fetch(url, {
                 method,
                 headers: {
-                    'Content-Type': 'event/json'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(eventData)
             });
 
             if (response.ok) {
-                // Перезагружаем страницу для обновления данных
-                window.location.reload();
+                await fetchEvents(); // Перезагружаем список мероприятий после добавления/редактирования
+                closeModal();
             } else {
                 const errorData = await response.json();
                 showToast(errorData.message || 'Ошибка при сохранении', 'error');
@@ -239,6 +252,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // --- INITIAL RENDER ---
-    renderEvents(serverEvents);
+    fetchEvents();
     handleResize();
 });

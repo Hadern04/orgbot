@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Календарь событий</title>
+    <link rel="stylesheet" href="/static/css/tasks.css">
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/main.min.css'/>
+    <link rel="icon" href="data:;base64,=">
+</head>
+<body>
+    <script type="importmap">
+    {
+      "imports": {
+        "fullcalendar": "https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/+esm",
+        "fullcalendar/daygrid": "https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/daygrid/+esm",
+        "fullcalendar/timegrid": "https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/timegrid/+esm",
+        "fullcalendar/list": "https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/list/+esm",
+        "fullcalendar/interaction": "https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/interaction/+esm"
+      }
+    }
+    </script>
+    <div class="container">
+        <header class="main-header">
+            <h1>Календарь событий</h1>
+            <div class="header-controls">
+                <div id="view-switcher" class="view-switcher">
+                    <button class="view-btn active" data-view="dayGridMonth">Месяц</button>
+                    <button class="view-btn" data-view="timeGridWeek">Неделя</button>
+                    <button class="view-btn" data-view="timeGridDay">День</button>
+                    <button class="view-btn" data-view="listWeek">Список</button>
+                </div>
+                <button id="add-item-btn" class="add-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span class="add-btn-text">Создать событие</span>
+                </button>
+            </div>
+        </header>
+
+        <div id="calendar-container">
+             <div id="calendar"></div>
+        </div>
+
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <img src="static/img/calendar-empty.png" alt="Пустой календарь">
+            <h2 id="empty-state-title">Событий пока нет</h2>
+            <p id="empty-state-text">Создайте новое событие, чтобы начать.</p>
+        </div>
+    </div>
+
+    <!-- Modal for Add/Edit Event -->
+    <div id="modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <form id="item-form">
+                <h2 id="modal-title">Создать событие</h2>
+                <input type="hidden" id="item-id">
+
+                <div class="form-group">
+                    <label for="event-title">Название события</label>
+                    <input type="text" id="event-title" name="eventTitle" required placeholder="Например, Встреча с клиентом">
+                </div>
+
+                <div class="form-group">
+                    <label for="event-datetime">Дата и время</label>
+                    <input type="datetime-local" id="event-datetime" name="eventDatetime" required>
+                </div>
+
+                 <div class="form-group">
+                    <label for="event-project">Связанное мероприятие</label>
+                    <div class="select-wrapper">
+                         <select id="event-project" name="eventProject">
+                            <option value="">Не выбрано</option>
+                            <option value="Проект 'Альфа'">Проект "Альфа"</option>
+                            <option value="Свадьба Ивановых">Свадьба Ивановых</option>
+                            <option value="Корпоратив 'Техно'">Корпоратив "Техно"</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="event-description">Описание</label>
+                    <textarea id="event-description" name="eventDescription" rows="3" placeholder="Дополнительные детали..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Чек-лист</label>
+                    <div id="checklist-container">
+                        <!-- Checklist items will be injected here -->
+                    </div>
+                    <button type="button" id="add-checklist-item-btn" class="add-checklist-item-btn">Добавить пункт</button>
+                </div>
+
+                 <div class="form-group">
+                    <label for="event-notification">Время уведомления</label>
+                    <div class="select-wrapper">
+                         <select id="event-notification" name="eventNotification" required>
+                            <option value="none">Не уведомлять</option>
+                            <option value="5">За 5 минут</option>
+                            <option value="15">За 15 минут</option>
+                            <option value="30">За 30 минут</option>
+                            <option value="60">За 1 час</option>
+                            <option value="1440">За 1 день</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" id="save-button">Сохранить</button>
+                    <button type="button" id="delete-button" class="delete" style="display: none;">Удалить</button>
+                    <button type="button" id="cancel-button" class="cancel">Отмена</button>
+                </div>
+                <div class="button-group-extra">
+                    <button type="button" id="notify-now-button" class="notify-now" style="display: none;">Отправить уведомление сейчас</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js'></script>
+    <script type="module" src="/static/js/tasks.js"></script>
+</body>
+</html>

@@ -48,18 +48,18 @@
                 <h2 id="modal-title">Добавить мероприятие</h2>
                 <input type="hidden" id="event-id">
                 <div class="form-group">
-                    <label for="event-name">Название мероприятия</label>
-                    <input type="text" id="event-name" name="eventName" required placeholder="Например, Конференция по AI">
+                    <label for="name">Название мероприятия</label>
+                    <input type="text" id="name" name="eventName" required placeholder="Например, Конференция по AI">
                 </div>
                 <div class="form-group">
-                    <label for="event-date">Дата проведения</label>
-                    <input type="text" id="event-date" name="eventDate" placeholder="Выберите дату..." required>
+                    <label for="date">Дата проведения</label>
+                    <input type="text" id="date" name="eventDate" placeholder="Выберите дату..." required>
                 </div>
                 <div class="form-group">
-                    <label for="event-location">Место проведения</label>
-                    <input type="text" id="event-location" name="eventLocation" required placeholder="Например, г. Москва, Экспоцентр">
+                    <label for="location">Место проведения</label>
+                    <input type="text" id="location" name="eventLocation" required placeholder="Например, г. Москва, Экспоцентр">
                 </div>
-                <input type="hidden" id="user_id" name="user_id" value="{{ user_id }}">
+                <input type="hidden" id="user-id" value="{{ user_id }}">
                 <div class="button-group">
                     <button type="submit" id="save-button">Сохранить</button>
                     <button type="button" id="cancel-button" class="cancel">Отмена</button>
@@ -76,9 +76,6 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/ru.js"></script>
-    <script>
-        const serverEvents = {{ events|tojson|safe }};
-    </script>
     <script type="module" src="/static/js/events.js"></script>
 </body>
 </html>

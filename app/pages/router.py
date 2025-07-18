@@ -1,76 +1,179 @@
 import logging
-from fastapi import APIRouter
-from fastapi.templating import Jinja2Templates
+
+from fastapi import APIRouter, HTTPException
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, RedirectResponse
-from app.api.dao import UserDAO, EventDAO, ContractorDAO
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
+from app.api.dao import UserDAO
 
 router = APIRouter(prefix='', tags=['Фронтенд'])
 templates = Jinja2Templates(directory='app/templates')
 
 
-@router.get('/events', response_class=HTMLResponse)
-async def read_root(request: Request, user_id):
-    data_page = {'request': request, 'access': False, 'title_h1': 'Мои мероприятия', 'events': []}
+async def get_user_or_error(user_id: int):
+    """Вспомогательная функция для получения пользователя"""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User ID is required")
+
     user = await UserDAO.find_one_or_none(telegram_id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
-    if user_id is None or user is None:
-        data_page[
-            'message'] = 'Пользователь, по которому нужно отобразить данные, не указан или не найден в базе данных'
-        return templates.TemplateResponse('events.html', data_page)
-    data_page['user_id'] = user.id
 
-    events = await EventDAO.get_events_by_user(user_id=user.id)
+@router.get('/events', response_class=HTMLResponse)
+async def get_events_page(request: Request, user_id: int):
+    """Получение страницы с мероприятиями пользователя"""
+    template = 'events.html'
+    try:
+        user = await get_user_or_error(user_id)
 
-    data_page['access'] = True
-    if events:
-        serialized_events = [
+        return templates.TemplateResponse(
+            template,
             {
-                'event_id': event['event_id'],
-                'event_title': event['event_title'],
-                'event_date': event['event_date'].isoformat(),
-                'event_location': event['event_location'],
-                'user_id': event['user_id']
+                'request': request,
+                'access': True,
+                'title_h1': 'Мои мероприятия',
+                'user_id': user.id
             }
-            for event in events
-        ]
-        data_page['events'] = serialized_events
-    return templates.TemplateResponse('events.html', data_page)
+        )
+
+    except HTTPException:
+        return templates.TemplateResponse(
+            template,
+            {
+                'request': request,
+                'access': False,
+                'title_h1': 'Мои мероприятия',
+                'message': 'Пользователь не найден или не указан'
+            }
+        )
+    except Exception as e:
+        logging.error(f'Error in events endpoint: {str(e)}')
+        return templates.TemplateResponse(
+            template,
+            {
+                'request': request,
+                'access': False,
+                'title_h1': 'Мои мероприятия',
+                'message': 'Произошла ошибка при загрузке данных'
+            }
+        )
 
 
 @router.get('/contractors', response_class=HTMLResponse)
-async def read_root(request: Request, user_id):
+async def get_contractors_page(request: Request, user_id: int):
+    """Получение страницы с подрядчиками"""
+    template = 'contractors.html'
     try:
-        data_page = {'request': request, 'access': False, 'title_h1': 'Список подрядчиков', 'categories': [], 'contractors': []}
+        user = await get_user_or_error(user_id)
+        return templates.TemplateResponse(
+            template,
+            {
+                'request': request,
+                'access': True,
+                'title_h1': 'Список подрядчиков',
+                'user_id': user.id
+            }
+        )
 
-        user = await UserDAO.find_one_or_none(telegram_id=user_id)
-        if user_id is None or user is None:
-            data_page[
-                'message'] = 'Пользователь, по которому нужно отобразить данные, не указан или не найден в базе данных'
-            return templates.TemplateResponse('contractors.html', data_page)
-        data_page['user_id'] = user.id
-
-        categories = await ContractorDAO.get_all_categories()
-        contractors = await ContractorDAO.get_all_accessible_contractors(user_id=user.id)
-
-        data_page['access'] = True
-        if categories:
-            data_page['categories'] = categories
-        if contractors and categories:
-            data_page['contractors'] = [
-                {
-                    'id': contractor['id'],
-                    'contractor_name': contractor['name'],
-                    'contractor_category': contractor['category'],
-                    'contractor_contact': contractor['contact'] or 'Не указан',
-                    'contractor_owner_id': contractor['owner_id']
-                }
-                for contractor in contractors
-            ]
-        return templates.TemplateResponse('contractors.html', data_page)
+    except HTTPException:
+        return templates.TemplateResponse(
+            template,
+            {
+                'request': request,
+                'access': False,
+                'title_h1': 'Список подрядчиков',
+                'message': 'Пользователь не найден или не указан'
+            }
+        )
     except Exception as e:
-        logging.error(f'Error in /contractors endpoint: {str(e)}')
+        logging.error(f'Error in contractors endpoint: {str(e)}')
+        return templates.TemplateResponse(
+            template,
+            {
+                'request': request,
+                'access': False,
+                'title_h1': 'Список подрядчиков',
+                'message': 'Произошла ошибка при загрузке данных'
+            }
+        )
 
-        data_page = {'error': 'Произошла ошибка при загрузке данных'}
-        return templates.TemplateResponse('contractors.html', data_page)
 
+@router.get('/tasks', response_class=HTMLResponse)
+async def get_tasks_page(request: Request, user_id: int):
+    """Получение страницы с мероприятиями пользователя"""
+    template = 'tasks.html'
+    try:
+        user = await get_user_or_error(user_id)
+        return templates.TemplateResponse(
+            template,
+            {
+                'request': request,
+                'access': True,
+                'title_h1': 'Мои мероприятия',
+                'user_id': user.id
+            }
+        )
+
+    except HTTPException:
+        return templates.TemplateResponse(
+            template,
+            {
+                'request': request,
+                'access': False,
+                'title_h1': 'Мои мероприятия',
+                'message': 'Пользователь не найден или не указан'
+            }
+        )
+    except Exception as e:
+        logging.error(f'Error in tasks endpoint: {str(e)}')
+        return templates.TemplateResponse(
+            template,
+            {
+                'request': request,
+                'access': False,
+                'title_h1': 'Мои мероприятия',
+                'message': 'Произошла ошибка при загрузке данных'
+            }
+        )
+
+
+@router.get('/checklists', response_class=HTMLResponse)
+async def get_checklists_page(request: Request, user_id: int):
+    """Получение страницы с мероприятиями пользователя"""
+    template = 'checklists.html'
+    try:
+        user = await get_user_or_error(user_id)
+        return templates.TemplateResponse(
+            template,
+            {
+                'request': request,
+                'access': True,
+                'title_h1': 'Мои мероприятия',
+                'user_id': user.id
+            }
+        )
+
+    except HTTPException:
+        return templates.TemplateResponse(
+            template,
+            {
+                'request': request,
+                'access': False,
+                'title_h1': 'Мои мероприятия',
+                'message': 'Пользователь не найден или не указан'
+            }
+        )
+    except Exception as e:
+        logging.error(f'Error in checklists endpoint: {str(e)}')
+        return templates.TemplateResponse(
+            template,
+            {
+                'request': request,
+                'access': False,
+                'title_h1': 'Мои мероприятия',
+                'message': 'Произошла ошибка при загрузке данных'
+            }
+        )

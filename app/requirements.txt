@@ -1,9 +1,0 @@
-aiogram
-fastapi
-pydantic
-sqlalchemy
-uvicorn
-jinja2
-pydantic_settings
-alembic
-aiosqlite

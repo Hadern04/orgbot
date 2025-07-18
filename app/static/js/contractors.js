@@ -1,273 +1,327 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
     // --- STATE ---
-    let currentCategory = 'Все';
+    let currentCategory = 'all';
+    let serverCategories = [];
+    let serverContractors = [];
 
     // --- DOM ELEMENTS ---
-    const itemList = document.getElementById('item-list');
-    const addItemBtn = document.getElementById('add-item-btn');
-    const emptyState = document.getElementById('empty-state');
-    const emptyStateTitle = document.getElementById('empty-state-title');
-    const emptyStateText = document.getElementById('empty-state-text');
-    const contractorListTitle = document.getElementById('contractor-list-title');
-    const categoryList = document.getElementById('category-list');
-    const addCategoryForm = document.getElementById('add-category-form');
-    const newCategoryNameInput = document.getElementById('new-category-name');
-    const modalOverlay = document.getElementById('modal-overlay');
-    const modalTitle = document.getElementById('modal-title');
-    const itemForm = document.getElementById('item-form');
-    const cancelButton = document.getElementById('cancel-button');
-    const itemIdInput = document.getElementById('item-id');
-    const itemNameInput = document.getElementById('item-name');
-    const itemCategoryInput = document.getElementById('item-category');
-    const itemContactInput = document.getElementById('item-contact');
-    const itemUserId = document.getElementById('user_id');
+    const $ = id => document.getElementById(id);
+    const itemList = $('item-list');
+    const addItemBtn = $('add-item-btn');
+    const emptyState = $('empty-state');
+    const emptyStateTitle = $('empty-state-title');
+    const emptyStateText = $('empty-state-text');
+    const contractorListTitle = $('contractor-list-title');
+    const categoryList = $('category-list');
+    const addCategoryForm = $('add-category-form');
+    const newCategoryNameInput = $('new-category-name');
+    const modalOverlay = $('modal-overlay');
+    const modalTitle = $('modal-title');
+    const itemForm = $('item-form');
+    const cancelButton = $('cancel-button');
+    const itemIdInput = $('item-id');
+    const itemNameInput = $('item-name');
+    const itemCategoryInput = $('item-category');
+    const itemContactInput = $('item-contact');
+    const itemUserId = $('user-id');
+    const toast = $('toast');
 
-    // Toast element
-    const toast = document.getElementById('toast');
-
-    // --- FUNCTIONS ---
-    function handleResize() {
-        const addBtnText = document.querySelector('.add-btn-text');
-        if (addBtnText) {
-            addBtnText.style.display = window.innerWidth <= 400 ? 'none' : 'inline';
-        }
-    }
-
-    function showToast(message, type = 'success') {
+    // --- HELPERS ---
+    const showToast = (message, type = 'success') => {
         toast.textContent = message;
         toast.className = `toast show ${type}`;
-        setTimeout(() => toast.className = toast.className.replace("show", ""), 3000);
-    }
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    };
 
-    function populateCategoriesForSelect() {
-        itemCategoryInput.innerHTML = serverCategories.length === 0
-            ? '<option value="">Сначала добавьте категорию</option>'
-            : serverCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-    }
+    const handleResize = () => {
+        const addBtnText = document.querySelector('.add-btn-text');
+        if (addBtnText) addBtnText.style.display = window.innerWidth <= 400 ? 'none' : 'inline';
+    };
 
-    function renderCategories() {
-        categoryList.innerHTML = `
-            <button class="category-btn ${currentCategory === 'Все' ? 'active' : ''}" data-category="Все">Все</button>
-            ${serverCategories.map(cat => `
-                <button class="category-btn ${currentCategory === cat ? 'active' : ''}" data-category="${cat}">${cat}</button>
-            `).join('')}
-        `;
-        populateCategoriesForSelect();
-    }
+    const fetchCategories = async () => {
+        try {
+            const res = await fetch(`/api/contractor-categories?owner_id=${itemUserId.value}`);
+            if (!res.ok) throw new Error('Ошибка загрузки категорий');
+            const data = await res.json();
+            serverCategories = data;  // [{id, title}, ...]
+            renderCategories();
+            populateCategorySelect();
+        } catch (err) {
+            console.error(err);
+            showToast('Ошибка загрузки категорий', 'error');
+        }
+    };
 
-    function renderItems() {
-        const filteredItems = currentCategory === 'Все'
-            ? serverContractors
-            : serverContractors.filter(item => item.contractor_category === currentCategory);
+    const fetchContractors = async (categoryId = 'all') => {
+        console.log('Rendering contractors:', serverContractors);
+        try {
+            let url = `/api/contractors?owner_id=${itemUserId.value}`;
+            if (categoryId !== 'all') {
+                url += `&category=${encodeURIComponent(categoryId)}`;
+            }
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Ошибка загрузки подрядчиков');
+            const data = await res.json();
+            serverContractors = data;
+            renderItems();
+        } catch (err) {
+            console.error(err);
+            showToast('Ошибка загрузки подрядчиков', 'error');
+        }
+    };
 
-        contractorListTitle.textContent = currentCategory === 'Все'
+    const populateCategorySelect = () => {
+        itemCategoryInput.innerHTML = serverCategories.length
+            ? serverCategories.map(cat => `<option value="${cat.id}">${cat.title}</option>`).join('')
+            : '<option value="">Сначала добавьте категорию</option>';
+    };
+
+    const renderCategories = () => {
+        categoryList.innerHTML = [
+            `<button class="category-btn ${currentCategory === 'all' ? 'active' : ''}" data-category-id="all">Все</button>`,
+            ...serverCategories.map(cat => `
+                <div class="category-wrapper">
+                    <button class="category-btn ${currentCategory === String(cat.id) ? 'active' : ''}" data-category-id="${cat.id}">${cat.title}</button>
+                    <button class="delete-category-btn" data-category-id="${cat.id}" title="Удалить категорию">✕</button>
+                </div>
+            `)
+        ].join('');
+    };
+
+    const renderItems = () => {
+        const filtered = serverContractors;
+
+        contractorListTitle.textContent = currentCategory === 'all'
             ? 'Все подрядчики'
-            : `Подрядчики: ${currentCategory}`;
+            : `Подрядчики: ${serverCategories.find(cat => String(cat.id) === currentCategory)?.title || ''}`;
 
-        if (filteredItems.length === 0) {
+        if (!filtered.length) {
             emptyState.style.display = 'flex';
             itemList.style.display = 'none';
-            emptyStateTitle.textContent = currentCategory === 'Все'
+            emptyStateTitle.textContent = currentCategory === 'all'
                 ? 'Список подрядчиков пуст'
-                : `В категории "${currentCategory}" нет подрядчиков`;
-            emptyStateText.textContent = currentCategory === 'Все'
+                : `В категории "${serverCategories.find(cat => String(cat.id) === currentCategory)?.title || ''}" нет подрядчиков`;
+            emptyStateText.textContent = currentCategory === 'all'
                 ? 'Добавьте нового подрядчика, чтобы начать.'
                 : 'Добавьте подрядчика в эту категорию или выберите другую.';
-        } else {
-            emptyState.style.display = 'none';
-            itemList.style.display = 'grid';
-            itemList.innerHTML = filteredItems.map(contractor => `
-                <div class="item-card"
-                     data-id="${contractor.id}"
-                     data-owner-id="${contractor.contractor_owner_id}">
-                    <div class="item-details">
-                        <h3>${contractor.contractor_name}</h3>
-                        <p class="item-contact">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                            </svg>
-                            <span>${contractor.contractor_contact}</span>
-                        </p>
-                    </div>
-                    <div class="item-actions">
-                        <button class="edit-btn" ${contractor.contractor_owner_id == itemUserId.value ? '' : 'disabled title="Только для просмотра"'}>
-                            Изменить
-                        </button>
-                        <button class="delete-btn" ${contractor.contractor_owner_id == itemUserId.value ? '' : 'disabled title="Только для просмотра"'}>
-                            Удалить
-                        </button>
-                        ${contractor.contractor_owner_id == itemUserId.value ? '' : '<span class="view-only-badge">Только просмотр</span>'}
-                    </div>
-                </div>
-            </div>
-        `).join('');
+            return;
         }
-    }
 
-    function openModal(type, itemId = null) {
+        emptyState.style.display = 'none';
+        itemList.style.display = 'grid';
+        itemList.innerHTML = filtered.map(c => `
+            <div class="item-card" data-id="${c.id}" data-owner-id="${c.owner_id}">
+                <div class="item-details">
+                    <h3>${c.name}</h3>
+                    <p class="item-contact">
+                        <svg width="16" height="16" ...></svg>
+                        <span>${c.contact}</span>
+                    </p>
+                </div>
+                <div class="item-actions">
+                    <button class="edit-btn" ${c.owner_id == itemUserId.value ? '' : 'disabled title="Только для просмотра"'}>Изменить</button>
+                    <button class="delete-btn" ${c.owner_id == itemUserId.value ? '' : 'disabled title="Только для просмотра"'}>Удалить</button>
+                    ${c.owner_id == itemUserId.value ? '' : '<span class="view-only-badge">Только просмотр</span>'}
+                </div>
+            </div>`
+        ).join('');
+    };
+
+    const openModal = (type, id = null) => {
+        console.log("itemForm перед reset:", itemForm);
         itemForm.reset();
+        modalTitle.textContent = type === 'edit' ? 'Редактировать подрядчика' : 'Добавить подрядчика';
+        itemIdInput.value = '';
 
-        if (type === 'edit') {
-            const item = serverContractors.find(e => e.id === itemId);
-            if (item) {
-                modalTitle.textContent = 'Редактировать подрядчика';
-                itemIdInput.value = item.id;
-                itemNameInput.value = item.contractor_name;
-                itemCategoryInput.value = item.contractor_category;
-                itemContactInput.value = item.contractor_contact
-            }
-        } else {
-            modalTitle.textContent = 'Добавить подрядчика';
-            itemIdInput.value = '';
-            if (currentCategory !== 'Все') {
-                itemCategoryInput.value = currentCategory;
-            }
+        if (type === 'edit' && id !== null) {
+            const item = serverContractors.find(c => c.id === id);
+            if (!item) return;
+            itemIdInput.value = item.id;
+            itemNameInput.value = item.name;
+            itemCategoryInput.value = item.category_id;
+            itemContactInput.value = item.contact;
+        } else if (currentCategory !== 'all') {
+            itemCategoryInput.value = currentCategory;
         }
 
         modalOverlay.style.display = 'flex';
         setTimeout(() => modalOverlay.classList.add('visible'), 10);
-    }
+    };
 
-    function closeModal() {
+    const closeModal = () => {
         modalOverlay.classList.remove('visible');
         setTimeout(() => modalOverlay.style.display = 'none', 300);
-    }
+    };
 
-    // --- EVENT LISTENERS ---
-    categoryList.addEventListener('click', (e) => {
-        if (e.target.classList.contains('category-btn')) {
-            currentCategory = e.target.dataset.category;
-            renderCategories();
-            renderItems();
+    const deleteContractor = async id => {
+        try {
+            const res = await fetch(`/api/contractors/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showToast('Подрядчик удален');
+                await fetchContractors(currentCategory);
+            } else {
+                const err = await res.json();
+                showToast(err.message || 'Ошибка при удалении', 'error');
+            }
+        } catch {
+            showToast('Ошибка сети', 'error');
         }
-    });
+    };
 
-    addCategoryForm.addEventListener('submit', (e) => {
+    // --- EVENTS ---
+    window.addEventListener('resize', handleResize);
+
+    addItemBtn.onclick = () => openModal('add');
+    cancelButton.onclick = closeModal;
+
+    categoryList.onclick = async e => {
+        if (e.target.classList.contains('category-btn')) {
+            currentCategory = e.target.dataset.categoryId;
+            renderCategories();
+            await fetchContractors(currentCategory); // загрузить подрядчиков для выбранной категории
+        }
+
+        if (e.target.classList.contains('delete-category-btn')) {
+            const cat = e.target.dataset.categoryId;
+
+            try {
+                // Проверка: есть ли подрядчики в этой категории
+                const checkRes = await fetch(`/api/contractors?owner_id=${itemUserId.value}&category=${cat}`);
+                const contractorsInCat = checkRes.ok ? await checkRes.json() : [];
+
+                if (contractorsInCat.length > 0) {
+                    return showToast('Нельзя удалить: в категории есть подрядчики', 'error');
+                }
+
+                // Удаление категории
+                const url = `/api/contractor-categories/${encodeURIComponent(cat)}`;
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    return showToast(err.detail || 'Ошибка удаления категории', 'error');
+                }
+
+                showToast('Категория удалена');
+                await fetchCategories();
+
+                if (currentCategory === cat) currentCategory = 'all';
+                await fetchContractors(currentCategory);
+
+            } catch (err) {
+                console.error(err);
+                showToast('Ошибка удаления категории', 'error');
+            }
+
+        }
+    };
+
+    addCategoryForm.addEventListener('submit', async e => {
         e.preventDefault();
         const newCategory = newCategoryNameInput.value.trim();
         if (!newCategory) return;
 
-        if (!serverCategories.includes(newCategory)) {
-            serverCategories.push(newCategory);
-            serverCategories.sort();
-            currentCategory = newCategory;
-            renderCategories();
-            renderItems();
-            newCategoryNameInput.value = '';
-            showToast('Категория добавлена!');
-        } else {
+        if (serverCategories.some(cat => cat.title === newCategory)) {
             showToast('Такая категория уже существует', 'error');
-        }
-    });
-
-    addItemBtn.addEventListener('click', () => openModal('add'));
-    cancelButton.addEventListener('click', closeModal);
-    modalOverlay.addEventListener('click', (e) => e.target === modalOverlay && closeModal());
-
-    itemList.addEventListener('click', async (e) => {
-        const card = e.target.closest('.item-card');
-        if (!card) return;
-
-        const itemId = parseInt(card.dataset.id);
-
-        if (e.target.classList.contains('edit-btn')) {
-            openModal('edit', itemId);
-        }
-
-        if (e.target.classList.contains('delete-btn')) {
-            const deleteContractor = async (confirmed) => {
-                if (!confirmed) return;
-
-                try {
-                    const response = await fetch(`/api/contractor/${itemId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    });
-
-                    if (response.ok) {
-                        // Обновляем список без перезагрузки страницы
-                        const index = serverContractors.findIndex(c => c.id === itemId);
-                        if (index !== -1) {
-                            serverContractors.splice(index, 1);
-                            renderItems();
-                        }
-                        showToast('Подрядчик удален', 'success');
-                    } else {
-                        const error = await response.json();
-                        showToast(error.message || 'Ошибка при удалении', 'error');
-                    }
-                } catch (error) {
-                    console.error('Delete error:', error);
-                    showToast('Ошибка сети', 'error');
-                }
-            };
-
-            // Проверяем, запущено ли в Telegram WebApp
-            if (window.Telegram?.WebApp?.platform !== 'unknown') {
-                Telegram.WebApp.showConfirm(
-                    'Вы уверены, что хотите удалить этого подрядчика?',
-                    deleteContractor
-                );
-            } else {
-                if (confirm('Вы уверены, что хотите удалить этого подрядчика?')) {
-                    await deleteContractor(true);
-                }
-            }
-        }
-    });
-
-    itemForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const submitButton = itemForm.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-
-        const id = parseInt(itemIdInput.value);
-
-        const ownerId = itemUserId.value;
-        if (!ownerId) {
-            showToast('Не удалось определить владельца', 'error');
             return;
         }
 
-        const contractorData = {
-            name: itemNameInput.value,
-            category: itemCategoryInput.value,
-            contact: itemContactInput.value,
-            owner_id: itemUserId.value
+        const payload = {
+            title: newCategory,
+            owner_id: parseInt(itemUserId.value)
         };
 
         try {
-            const response = await fetch(id ? `/api/contractor/${id}` : '/api/contractor', {
-                method: id ? 'PUT' : 'POST',
+            const response = await fetch('/api/contractor-categories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                showToast(err.detail || 'Ошибка при создании категории', 'error');
+                return;
+            }
+
+            showToast('Категория добавлена!');
+            newCategoryNameInput.value = '';
+            await fetchCategories();
+
+            // Выставим текущую категорию как новую последнюю
+            currentCategory = serverCategories.length ? String(serverCategories[serverCategories.length - 1].id) : 'all';
+            await fetchContractors(currentCategory);
+
+        } catch (err) {
+            showToast('Ошибка сети', 'error');
+        }
+    });
+
+    itemList.onclick = async e => {
+        const itemCard = e.target.closest('.item-card');
+        if (!itemCard) return;
+        const id = Number(itemCard.dataset.id);
+        if (e.target.classList.contains('edit-btn')) {
+            openModal('edit', id);
+        }
+        if (e.target.classList.contains('delete-btn')) {
+            if (confirm('Удалить подрядчика?')) {
+                await deleteContractor(id);
+            }
+        }
+    };
+
+    document.addEventListener('submit', e => {
+        console.log('Submit event пойман на документе', e.target);
+    }, true);
+
+    itemForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const id = itemIdInput.value;
+        const name = itemNameInput.value.trim();
+        const category_id = itemCategoryInput.value;
+        const contact = itemContactInput.value.trim();
+
+        const payload = {
+            name: name,
+            category_id: category_id,
+            contact: contact,
+            owner_id: parseInt(itemUserId.value)
+        };
+
+        try {
+            const url = id ? `/api/contractors/${id}` : '/api/contractors';
+            const method = id ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(contractorData)
+                body: JSON.stringify(payload)
             });
 
             if (response.ok) {
-                showToast(id ? 'Изменения сохранены' : 'Подрядчик добавлен');
+                showToast(id ? 'Подрядчик обновлен' : 'Подрядчик добавлен');
                 closeModal();
-                renderItems();
+                await fetchContractors(currentCategory);
             } else {
                 const errorData = await response.json();
-                showToast(errorData.message || 'Ошибка при сохранении', 'error');
+                showToast(errorData.detail || 'Ошибка при сохранении', 'error');
             }
         } catch (error) {
             console.error('Save error:', error);
             showToast('Ошибка сети', 'error');
-        } finally {
-            submitButton.disabled = false;
         }
     });
 
-    window.addEventListener('resize', handleResize);
-
-    // --- INITIAL RENDER ---
-    renderCategories();
-    renderItems();
-    handleResize();
+    // Загрузка при старте
+    (async () => {
+        await fetchCategories();
+        await fetchContractors(currentCategory);
+        handleResize();
+    })();
 });

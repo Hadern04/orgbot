@@ -11,7 +11,7 @@ class EventData(BaseModel):
         max_length=100,
         description="Название мероприятия"
     )
-    event_date: date = Field(
+    date: date = Field(
         ...,
         description="Дата проведения мероприятия"
     )
@@ -20,7 +20,7 @@ class EventData(BaseModel):
         max_length=200,
         description="Место проведения мероприятия"
     )
-    user_id: str = Field(
+    owner_id: int = Field(
         ...,
         description="ID пользователя")
 

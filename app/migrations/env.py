@@ -1,11 +1,13 @@
+import asyncio
 from logging.config import fileConfig
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
-from sqlalchemy import pool
 from alembic import context
-import asyncio
+from sqlalchemy import pool
+from sqlalchemy.ext.asyncio import create_async_engine
+
 from app.database.db import Base
-from app.database.models import User, Event, Contractor
+from app.database.models import User, Event, Contractor, ContractorCategory, Task, ChecklistItem, Checklist, \
+    EventChecklist, EventContractor, CompletedChecklistItem
 
 # Указываем на метаданные наших моделей
 target_metadata = Base.metadata

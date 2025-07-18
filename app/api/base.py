@@ -66,15 +66,15 @@ class BaseDAO:
             Созданный экземпляр модели.
         """
         async with async_session_maker() as session:
-            async with session.begin():
-                new_instance = cls.model(**values)
-                session.add(new_instance)
-                try:
-                    await session.commit()
-                except SQLAlchemyError as e:
-                    await session.rollback()
-                    raise e
+            new_instance = cls.model(**values)
+            session.add(new_instance)
+            try:
+                await session.commit()
+                await session.refresh(new_instance)
                 return new_instance
+            except SQLAlchemyError as e:
+                await session.rollback()
+                raise e
 
     @classmethod
     async def delete(cls, id: int):
